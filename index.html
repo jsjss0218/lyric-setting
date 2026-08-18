@@ -164,6 +164,58 @@
   }
   .tag-hint:hover { background: var(--point-soft); border-color: var(--point); color: var(--point); }
 
+  .tag-custom-form {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+  }
+  .tag-custom-input {
+    width: 110px;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 5px 10px;
+    border: 1px solid var(--border-strong);
+    border-radius: 16px;
+    background: #fff;
+    color: var(--text);
+    font-family: var(--font);
+    outline: none;
+  }
+  .tag-custom-input:focus { border-color: var(--point); }
+  .tag-custom-input::placeholder { color: var(--text-dim); }
+  .btn-tag-add {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--point);
+    border: none;
+    border-radius: 16px;
+    padding: 5px 14px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-tag-add:hover { background: var(--point-dark); }
+
+  /* 사용자 프리셋 태그 */
+  .tag-hint.tag-custom {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding-right: 6px;
+  }
+  .tag-del {
+    font-size: 12px;
+    line-height: 1;
+    color: var(--text-dim);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 2px 3px;
+    border-radius: 50%;
+  }
+  .tag-del:hover { color: #fff; background: var(--tag); }
+
   /* ── 오른쪽 패널 ── */
   .right-top {
     display: flex;
@@ -693,6 +745,11 @@
       <span class="tag-hint b" onclick="insertTag('<C>')">&lt;C&gt;</span>
       <span class="tag-hint p" onclick="insertTag('<후렴>')">&lt;후렴&gt;</span>
       <span class="tag-hint v" onclick="insertTag('<간주>')">&lt;간주&gt;</span>
+      <span id="customTagList"></span>
+      <span class="tag-custom-form">
+        <input id="customTagInput" class="tag-custom-input" placeholder="프리셋 이름" onkeydown="if(event.key==='Enter'){event.preventDefault();addPreset();}">
+        <button class="btn-tag-add" onclick="addPreset()">프리셋 추가</button>
+      </span>
     </div>
   </div>
 
@@ -1264,6 +1321,55 @@ function insertTag(tag) {
   ta.focus();
   parse();
 }
+
+// ── 사용자 섹션 프리셋 (localStorage) ──
+const CUSTOM_TAG_KEY = 'worshipCustomSectionTags';
+
+function loadCustomPresets() {
+  try { return JSON.parse(localStorage.getItem(CUSTOM_TAG_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function saveCustomPresets(list) {
+  localStorage.setItem(CUSTOM_TAG_KEY, JSON.stringify(list));
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function renderCustomPresets() {
+  const list = loadCustomPresets();
+  const wrap = document.getElementById('customTagList');
+  wrap.innerHTML = list.map((name, i) => `
+    <span class="tag-hint tag-custom" onclick="insertTag('<${name.replace(/'/g, "\\'")}>')">
+      &lt;${escapeHtml(name)}&gt;<button class="tag-del" type="button" title="프리셋 삭제" onclick="event.stopPropagation(); removePreset(${i})">×</button>
+    </span>
+  `).join('');
+}
+
+function addPreset() {
+  const input = document.getElementById('customTagInput');
+  const name = input.value.trim().replace(/^<|>$/g, '');
+  if (!name) { input.focus(); return; }
+  const list = loadCustomPresets();
+  if (!list.includes(name)) {
+    list.push(name);
+    saveCustomPresets(list);
+    renderCustomPresets();
+  }
+  input.value = '';
+  input.focus();
+}
+
+function removePreset(index) {
+  const list = loadCustomPresets();
+  list.splice(index, 1);
+  saveCustomPresets(list);
+  renderCustomPresets();
+}
+
+renderCustomPresets();
 
 // 어디서 복사하든 <...> 제거 (입력창, 출력영역, 전체 선택 모두)
 document.addEventListener('copy', function(e) {
