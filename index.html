@@ -680,6 +680,152 @@
     font-size: 13px;
     color: var(--text-dim);
   }
+  .lib-item-check {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--point);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  /* 여러 곡 선택 → 합쳐서 내보내기 바 */
+  .lib-combine-bar {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 18px;
+    background: var(--point-soft);
+    border-bottom: 1px solid var(--border);
+  }
+  .lib-combine-bar.show { display: flex; }
+  .lib-combine-count {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--point-dark);
+  }
+  .btn-combine-open {
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--point);
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s;
+  }
+  .btn-combine-open:hover { background: var(--point-dark); }
+
+  /* 순서 정하기 모달 */
+  .combine-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(20,22,26,0.45);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  .combine-overlay.open { display: flex; }
+  .combine-modal {
+    width: 460px;
+    max-width: 92vw;
+    max-height: 82vh;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.28);
+    display: flex;
+    flex-direction: column;
+    /* hidden이면 내부 PPTX 드롭다운(절대배치)이 모달 경계에 잘림 */
+    overflow: visible;
+  }
+  .combine-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .combine-modal-title { font-size: 15px; font-weight: 700; }
+  .btn-combine-close {
+    border: none;
+    background: none;
+    font-size: 20px;
+    line-height: 1;
+    color: var(--text-dim);
+    cursor: pointer;
+    padding: 0 2px;
+  }
+  .btn-combine-close:hover { color: var(--text); }
+  .combine-modal-hint {
+    padding: 8px 18px;
+    font-size: 12px;
+    color: var(--text-dim);
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  .combine-list {
+    overflow-y: auto;
+    flex: 1;
+    padding: 4px 0;
+  }
+  .combine-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+  }
+  .combine-item-order {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--point-soft);
+    color: var(--point);
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .combine-item-title {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .btn-combine-move, .btn-combine-remove {
+    width: 26px;
+    height: 26px;
+    border: 1px solid var(--border-strong);
+    background: #fff;
+    border-radius: 6px;
+    font-size: 11px;
+    color: var(--text-sub);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .btn-combine-move:hover { border-color: var(--point); color: var(--point); }
+  .btn-combine-move:disabled { opacity: 0.3; cursor: default; }
+  .btn-combine-move:disabled:hover { border-color: var(--border-strong); color: var(--text-sub); }
+  .btn-combine-remove:hover { border-color: var(--tag); color: var(--tag); }
+  .combine-empty {
+    padding: 28px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .combine-modal-foot {
+    padding: 12px 18px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+  }
 
   /* 상태바 내보내기/가져오기 */
   .stat-actions {
@@ -724,6 +870,10 @@
       <div class="lib-drawer-head">
         <input id="libSearch" class="lib-search" placeholder="곡 제목 검색..." oninput="libRender()">
         <span class="lib-count" id="libCount"></span>
+      </div>
+      <div class="lib-combine-bar" id="libCombineBar">
+        <span class="lib-combine-count" id="libCombineCount">0곡 선택됨</span>
+        <button class="btn-combine-open" onclick="openCombineModal()">순서 정해서 내보내기 ▸</button>
       </div>
       <div class="lib-list" id="libList"></div>
     </div>
@@ -817,6 +967,36 @@
     </div>
   </div>
 
+</div>
+
+<!-- 여러 곡 순서 정하기 / 합쳐서 내보내기 모달 -->
+<div class="combine-overlay" id="combineOverlay" onclick="if (event.target === this) closeCombineModal()">
+  <div class="combine-modal">
+    <div class="combine-modal-head">
+      <span class="combine-modal-title">내보낼 순서 정하기</span>
+      <button class="btn-combine-close" onclick="closeCombineModal()">×</button>
+    </div>
+    <div class="combine-modal-hint">▲▼ 로 순서를 바꾸고, 아래 버튼으로 한 파일로 저장하세요.</div>
+    <div class="combine-list" id="combineList"></div>
+    <div class="combine-modal-foot">
+      <button class="btn-export" onclick="exportCombinedTxt(this)" title="여러 곡을 하나의 텍스트 파일로 저장">TXT</button>
+      <button class="btn-export" onclick="exportCombinedWord(this)" title="여러 곡을 하나의 Word 파일로 저장">Word</button>
+      <div class="pptx-wrap">
+        <button class="btn-export" onclick="toggleCombinePptxMenu(event)" title="여러 곡을 하나의 PPTX 파일로 저장">PPTX ▾</button>
+        <div class="pptx-menu" id="combinePptxMenu">
+          <button onclick="exportCombinedPptx('green')">
+            <span class="pptx-dot" style="background:#00ff00;"></span>
+            투명배경 (녹색 크로마키)
+          </button>
+          <button onclick="exportCombinedPptx('black')">
+            <span class="pptx-dot" style="background:#000;border:1px solid #555;"></span>
+            검정배경 · 흰 글씨 가운데
+          </button>
+          <div class="pptx-note">곡마다 제목 슬라이드 자동 삽입 · 16:9</div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -972,6 +1152,23 @@ function getOrderedSections() {
       statusEl.className = 'songform-status ok';
     }
   }
+
+  return ordered.length ? ordered : sections;
+}
+
+// getOrderedSections()의 순수 함수 버전 — 화면 상태를 건드리지 않고
+// 임의의 가사/송폼 문자열(예: 라이브러리에 저장된 다른 곡)을 정렬해 반환
+function getOrderedSectionsFrom(raw, form) {
+  const sections = parseSections(raw || '');
+  const f = (form || '').trim();
+  if (!f) return sections;
+
+  const tokens = f.split(/[\s\-,>·]+/).map(t => t.replace(/[<>]/g, '').trim()).filter(Boolean);
+  const ordered = [];
+  tokens.forEach(tok => {
+    const sec = findSectionByToken(sections, tok);
+    if (sec) ordered.push(sec);
+  });
 
   return ordered.length ? ordered : sections;
 }
@@ -1249,11 +1446,11 @@ function togglePptxMenu(e) {
 // 바깥 클릭 시 메뉴 닫기
 document.addEventListener('click', () => {
   document.getElementById('pptxMenu')?.classList.remove('open');
+  document.getElementById('combinePptxMenu')?.classList.remove('open');
 });
 
-// PPTX용: 송폼 순서 + 항상 2줄씩 고정으로 슬라이드(줄 배열) 목록 생성
-function getPptxSlides() {
-  const sections = getOrderedSections();
+// 섹션 배열 → 송폼 순서 + 항상 2줄씩 고정으로 슬라이드(줄 배열) 목록 생성
+function slidesFromSections(sections) {
   const slides = [];
   sections.forEach(sec => {
     for (const group of sec.groups) {
@@ -1263,6 +1460,30 @@ function getPptxSlides() {
     }
   });
   return slides;
+}
+
+function getPptxSlides() {
+  return slidesFromSections(getOrderedSections());
+}
+
+function addPptxLyricSlide(pptx, lineArr, mode) {
+  const isGreen = (mode === 'green');
+  const bgColor = isGreen ? '00FF00' : '000000';
+  const slide = pptx.addSlide();
+  slide.background = { color: bgColor };
+  slide.addText(lineArr.join('\n'), {
+    x: 0.5, y: 0, w: 12.333, h: 7.5,
+    align: 'center',
+    valign: 'middle',          // 가로세로 완전 가운데
+    fontFace: 'Malgun Gothic',  // 맑은 고딕
+    fontSize: 40,
+    bold: true,
+    color: 'FFFFFF',           // 흰 글씨
+    lineSpacingMultiple: 1.3,
+    // 녹색 크로마키 모드에서 글자 가독성 위해 외곽선(검정) 추가
+    outline: isGreen ? { size: 1, color: '000000' } : undefined,
+    shadow: isGreen ? { type: 'outer', color: '000000', blur: 3, offset: 2, angle: 45, opacity: 0.6 } : undefined
+  });
 }
 
 function exportPptx(mode) {
@@ -1281,31 +1502,9 @@ function exportPptx(mode) {
   pptx.defineLayout({ name: 'FHD', width: 13.333, height: 7.5 }); // 16:9
   pptx.layout = 'FHD';
 
-  // 모드별 설정
-  const isGreen = (mode === 'green');
-  const bgColor = isGreen ? '00FF00' : '000000';
+  slides.forEach(lineArr => addPptxLyricSlide(pptx, lineArr, mode));
 
-  slides.forEach(lineArr => {
-    const slide = pptx.addSlide();
-    slide.background = { color: bgColor };
-
-    const text = lineArr.join('\n');
-    slide.addText(text, {
-      x: 0.5, y: 0, w: 12.333, h: 7.5,
-      align: 'center',
-      valign: 'middle',          // 가로세로 완전 가운데
-      fontFace: 'Malgun Gothic',  // 맑은 고딕
-      fontSize: 40,
-      bold: true,
-      color: 'FFFFFF',           // 흰 글씨
-      lineSpacingMultiple: 1.3,
-      // 녹색 크로마키 모드에서 글자 가독성 위해 외곽선(검정) 추가
-      outline: isGreen ? { size: 1, color: '000000' } : undefined,
-      shadow: isGreen ? { type: 'outer', color: '000000', blur: 3, offset: 2, angle: 45, opacity: 0.6 } : undefined
-    });
-  });
-
-  const suffix = isGreen ? '_투명(녹색)' : '_검정배경';
+  const suffix = mode === 'green' ? '_투명(녹색)' : '_검정배경';
   pptx.writeFile({ fileName: getFileName() + suffix + '.pptx' })
     .catch(() => alert('PPTX 저장 중 오류가 발생했습니다.'));
 }
@@ -1477,6 +1676,11 @@ function libRender() {
   const countEl = document.getElementById('libCount');
   if (countEl) countEl.textContent = `${lib.length}곡 저장됨`;
 
+  // 삭제 등으로 라이브러리에서 사라진 곡은 선택 목록에서도 제거
+  const titleSet = new Set(lib.map(s => s.title));
+  libSelected = libSelected.filter(t => titleSet.has(t));
+  updateCombineBar();
+
   if (!lib.length) {
     listEl.innerHTML = '<div class="lib-empty">저장된 가사가 없습니다.<br>곡 제목을 입력하고 저장 버튼을 눌러주세요.</div>';
     return;
@@ -1486,14 +1690,20 @@ function libRender() {
     return;
   }
 
-  listEl.innerHTML = filtered.map(s => `
+  listEl.innerHTML = filtered.map(s => {
+    const songJson = JSON.stringify(s).replace(/'/g, "&#39;");
+    const titleJson = JSON.stringify(s.title).replace(/'/g, "&#39;");
+    const checked = libSelected.includes(s.title) ? 'checked' : '';
+    return `
     <div class="lib-item">
-      <div class="lib-item-title" onclick='libLoadSong(${JSON.stringify(s).replace(/'/g, "&#39;")})'>${s.title}</div>
+      <input type="checkbox" class="lib-item-check" ${checked} onclick="event.stopPropagation()" onchange='libToggleSelect(${titleJson}, this.checked)'>
+      <div class="lib-item-title" onclick='libLoadSong(${songJson})'>${s.title}</div>
       <div class="lib-item-date">${s.savedAt || ''}</div>
-      <button class="btn-lib-load" onclick='libLoadSong(${JSON.stringify(s).replace(/'/g, "&#39;")})'>불러오기</button>
+      <button class="btn-lib-load" onclick='libLoadSong(${songJson})'>불러오기</button>
       <button class="btn-lib-del" onclick="libDelete('${s.title.replace(/'/g, "\\'")}')">삭제</button>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function libToggle() {
@@ -1543,6 +1753,185 @@ function libImportJson(input) {
   };
   reader.readAsText(file);
   input.value = ''; // 같은 파일 재선택 가능하도록
+}
+
+// ── 여러 곡 선택 → 순서 정해서 한 파일로 내보내기 ──
+let libSelected = []; // 선택된 곡 제목, 선택한 순서를 그대로 유지
+
+function libToggleSelect(title, checked) {
+  if (checked) {
+    if (!libSelected.includes(title)) libSelected.push(title);
+  } else {
+    libSelected = libSelected.filter(t => t !== title);
+  }
+  updateCombineBar();
+}
+
+function updateCombineBar() {
+  const bar = document.getElementById('libCombineBar');
+  if (!bar) return;
+  bar.classList.toggle('show', libSelected.length > 0);
+  const countEl = document.getElementById('libCombineCount');
+  if (countEl) countEl.textContent = `${libSelected.length}곡 선택됨`;
+}
+
+function getSelectedSongs() {
+  const lib = libLoad();
+  return libSelected.map(title => lib.find(s => s.title === title)).filter(Boolean);
+}
+
+function openCombineModal() {
+  if (!libSelected.length) return;
+  renderCombineList();
+  document.getElementById('combineOverlay').classList.add('open');
+}
+
+function closeCombineModal() {
+  document.getElementById('combineOverlay').classList.remove('open');
+  document.getElementById('combinePptxMenu')?.classList.remove('open');
+}
+
+function renderCombineList() {
+  const listEl = document.getElementById('combineList');
+  if (!libSelected.length) {
+    listEl.innerHTML = '<div class="combine-empty">선택된 곡이 없습니다.</div>';
+    return;
+  }
+  listEl.innerHTML = libSelected.map((title, i) => `
+    <div class="combine-item">
+      <span class="combine-item-order">${i + 1}</span>
+      <span class="combine-item-title">${escapeHtml(title)}</span>
+      <button class="btn-combine-move" title="위로" onclick="combineMove(${i}, -1)" ${i === 0 ? 'disabled' : ''}>▲</button>
+      <button class="btn-combine-move" title="아래로" onclick="combineMove(${i}, 1)" ${i === libSelected.length - 1 ? 'disabled' : ''}>▼</button>
+      <button class="btn-combine-remove" title="목록에서 제외" onclick="combineRemove(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+function combineMove(index, dir) {
+  const target = index + dir;
+  if (target < 0 || target >= libSelected.length) return;
+  [libSelected[index], libSelected[target]] = [libSelected[target], libSelected[index]];
+  renderCombineList();
+}
+
+function combineRemove(index) {
+  libSelected.splice(index, 1);
+  updateCombineBar();
+  renderCombineList();
+  libRender(); // 라이브러리 목록의 체크박스 상태 동기화
+  if (!libSelected.length) closeCombineModal();
+}
+
+function toggleCombinePptxMenu(e) {
+  e.stopPropagation();
+  document.getElementById('combinePptxMenu').classList.toggle('open');
+}
+
+function getLinesPerSlide() {
+  return parseInt(document.getElementById('lineCount').value);
+}
+
+// 선택 곡들을 하나로 묶는 파일명 (첫 곡 제목 기준, 2곡 이상이면 "외 N곡" 표기)
+function combinedFileName(suffix) {
+  const songs = getSelectedSongs();
+  if (!songs.length) return '가사모음' + suffix;
+  const base = songs.length > 1
+    ? `${songs[0].title}_외${songs.length - 1}곡`
+    : songs[0].title;
+  return base.replace(/[\\/:*?"<>|]/g, '').slice(0, 50) + suffix;
+}
+
+function exportCombinedTxt(btn) {
+  const songs = getSelectedSongs();
+  if (!songs.length) return;
+  const linesPerSlide = getLinesPerSlide();
+
+  const parts = songs.map(s => {
+    const sections = getOrderedSectionsFrom(s.lyrics, s.songform);
+    const body = sections.map(sec => buildSectionText(sec, linesPerSlide)).join('\n\n');
+    return `■ ${s.title}\n\n${body}`;
+  });
+  const text = parts.join('\n\n\n');
+
+  const blob = new Blob(['\uFEFF' + text.replace(/\n/g, '\r\n')], { type: 'text/plain;charset=utf-8' });
+  downloadBlob(blob, combinedFileName('.txt'));
+  if (btn) flashExport(btn);
+}
+
+function exportCombinedWord(btn) {
+  const songs = getSelectedSongs();
+  if (!songs.length) return;
+  const linesPerSlide = getLinesPerSlide();
+  const sectionBlank = `<p style="${FONT_STYLE}margin:0;"><span style="${SPAN_STYLE}">&nbsp;</span></p>`;
+  const titleStyle = `font-family:${FONT_FAMILY};font-size:15.0pt;font-weight:bold;margin:0 0 8pt 0;`;
+
+  const bodyHtml = songs.map((s, idx) => {
+    const sections = getOrderedSectionsFrom(s.lyrics, s.songform);
+    const secHtml = sections.map(sec => buildSectionHtml(sec, linesPerSlide)).join('\n' + sectionBlank + '\n');
+    const pageBreak = idx > 0 ? 'page-break-before:always;' : '';
+    return `<p style="${pageBreak}${titleStyle}">${escapeHtml(s.title)}</p>\n${secHtml}`;
+  }).join('\n' + sectionBlank + '\n');
+
+  const docHtml =
+    '<html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
+    'xmlns:w="urn:schemas-microsoft-com:office:word" ' +
+    'xmlns="http://www.w3.org/TR/REC-html40">' +
+    '<head><meta charset="utf-8">' +
+    '<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View>' +
+    '<w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->' +
+    '<style>' +
+    `@page { margin: 2cm; }` +
+    `body { ${FONT_STYLE} }` +
+    `p { margin: 0; ${FONT_STYLE} }` +
+    '</style></head>' +
+    `<body>${bodyHtml}</body></html>`;
+
+  const blob = new Blob(['\uFEFF' + docHtml], { type: 'application/msword;charset=utf-8' });
+  downloadBlob(blob, combinedFileName('.doc'));
+  if (btn) flashExport(btn);
+}
+
+function addPptxTitleSlide(pptx, title, mode) {
+  const isGreen = (mode === 'green');
+  const bgColor = isGreen ? '00FF00' : '000000';
+  const slide = pptx.addSlide();
+  slide.background = { color: bgColor };
+  slide.addText(title, {
+    x: 0.5, y: 0, w: 12.333, h: 7.5,
+    align: 'center',
+    valign: 'middle',
+    fontFace: 'Malgun Gothic',
+    fontSize: 32,
+    italic: true,
+    color: isGreen ? '000000' : 'FFFFFF',
+    outline: isGreen ? { size: 1, color: '000000' } : undefined
+  });
+}
+
+function exportCombinedPptx(mode) {
+  document.getElementById('combinePptxMenu')?.classList.remove('open');
+
+  if (typeof PptxGenJS === 'undefined') {
+    alert('PPTX 라이브러리를 불러오지 못했습니다.\n인터넷 연결을 확인해주세요.');
+    return;
+  }
+  const songs = getSelectedSongs();
+  if (!songs.length) return;
+
+  const pptx = new PptxGenJS();
+  pptx.defineLayout({ name: 'FHD', width: 13.333, height: 7.5 }); // 16:9
+  pptx.layout = 'FHD';
+
+  songs.forEach(s => {
+    addPptxTitleSlide(pptx, s.title, mode);
+    const sections = getOrderedSectionsFrom(s.lyrics, s.songform);
+    slidesFromSections(sections).forEach(lineArr => addPptxLyricSlide(pptx, lineArr, mode));
+  });
+
+  const suffix = mode === 'green' ? '_투명(녹색)' : '_검정배경';
+  pptx.writeFile({ fileName: combinedFileName(suffix + '.pptx') })
+    .catch(() => alert('PPTX 저장 중 오류가 발생했습니다.'));
 }
 </script>
 </body>
